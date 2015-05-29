@@ -1,0 +1,84 @@
+#!/bin/bash
+
+source config.sh
+
+
+echo "POVRAY binary is located at:  $povray_command"
+
+
+#Where to put files.  Don't change these!!!
+tile_directory='tiles'
+script_directory='tmp_scripts'
+
+
+#some input checks:
+if [ "x$1" == "x" ]; then
+   echo "ERROR! Missing arguments.    Usage:   make_scripts.sh input_file.pov width height "
+else
+if [[ ! -a "$1" ]]; then
+   echo "WARNING!  Specified POVray scene file $1 not found.  Make sure it exists before running any jobs!"
+fi
+if [[ ! -a "$submit_script_skeleton" ]]; then
+   echo "ERROR!  Missing submit script skeleton does not exist. All renders will fail. Check your config."
+fi
+
+
+
+echo "" > runAll.sh
+
+render_line1="$povray_command +I../../$1 +W$img_width +H$img_height "
+render_line2=" $povray_flags  +O../../${tile_directory}/tile_"
+
+rm -r "$script_directory"
+#rm -r "$tile_directory"
+mkdir "$tile_directory"
+
+count=0
+for SC in 5 6 4 2 8 3 1 9 7 0 ; do
+   for SR in 5 2 0 8 6 4 7 9 3 1  ; do
+      count=$(( $count + 1 ))
+      EC=$(( $SC + 1 ))
+      ER=$(( $SR + 1 ))
+      if [ "x$EC" == "x10" ]; then
+         ECs="1.0"
+      else
+            ECs="0.$EC"
+      fi
+
+      if [ "x$ER" == "x10" ]; then
+         ERs="1.0"
+      else
+         ERs="0.$ER"
+      fi
+
+      render_line=$render_line1" +SC0.$SC +SR0.$SR +EC$ECs +ER$ERs"${render_line2}${count}".tga "
+#      echo $render_line
+
+      jobdir=$script_directory"/job"${count}
+      thisScript=$jobdir"/run_${count}.sh"
+
+      mkdir -p "$jobdir"
+      
+      cat $submit_script_skeleton > $thisScript
+      sed -i "s|!!!POVRAY_COMMAND!!!|$render_line|" $thisScript
+      sed -i "s|!!!COUNT!!!|${count}|g" $thisScript
+      sed -i "s|!!!INPUTFILE!!!|${1}|g" $thisScript      
+
+
+      echo "cd $jobdir" >> runAll.sh
+      echo $script_run_command" run_${count}.sh  "  >> runAll.sh
+      echo "cd ../.." >> runAll.sh
+      echo "" >> runAll.sh
+
+   done
+done
+
+
+
+
+fi
+
+
+
+
+
