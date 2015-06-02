@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#
+# Adds reflection line to povray file
+#
+
+infile="$1"
+outfile=$( sed 's|.pov||g' <<< $infile )"_reflective.pov"
+
+sed 's|finish\ {.*[0-9]\.[0-9]*\ }|finish { reflection {0.06, 0.30} ambient 0.030 diffuse 0.300 phong 0.05 phong_size 60.000 specular 0.500 }|g'  $infile > $outfile
+
+
+
